@@ -1,6 +1,6 @@
 ---
 name: review-council
-description: Fan out any artifact (spec, code, design doc, architecture decision) to 3 independent LLM CLI reviewers (Claude Code, Gemini CLI, Codex CLI) for parallel review, then synthesize their feedback into a prioritized action list. Trigger on "review council", "multi-model review", "council review", "LLM review panel", "get multiple AI opinions", "consensus review", or any request to review specs/code/designs with multiple models.
+description: Fan out any artifact to 3 independent LLM CLI reviewers (Claude Code, Gemini CLI, Codex CLI) for parallel review, then synthesize feedback into a prioritized action list. Supports multiple audit types including general review, security audit, performance audit, database schema audit, prompt engineering audit, and accessibility audit. Trigger on "review council", "multi-model review", "council review", "LLM review panel", "get multiple AI opinions", "consensus review", "security audit", "performance audit", "database audit", "schema audit", "accessibility audit", "a11y audit", "prompt audit", "AI audit", or any request to review/audit specs/code/designs with multiple models.
 ---
 
 # Review Council
@@ -38,6 +38,21 @@ Fan out any artifact to 3 independent LLM CLI reviewers running different models
 
 Different models trained by different teams catch different classes of issues. This is about coverage through diversity, not finding the "best" model.
 
+## Audit Types
+
+The council supports multiple specialized audit types. Each uses a different prompt template tuned to specific evaluation dimensions.
+
+| Audit Type | Prompt Template | Trigger Phrases | Best For |
+|------------|----------------|-----------------|----------|
+| **General Review** | `prompts/general-review.md` | "review council", "multi-model review" | Specs, design docs, architecture decisions |
+| **Security Audit** | `prompts/security-audit.md` | "security audit", "security review" | Auth flows, API routes, secrets, OWASP |
+| **Performance Audit** | `prompts/performance-audit.md` | "performance audit", "perf review" | Next.js bundles, data fetching, DB queries |
+| **Database Audit** | `prompts/database-audit.md` | "database audit", "schema audit", "DB review" | Prisma schemas, migrations, indexes, queries |
+| **Prompt Engineering Audit** | `prompts/prompt-engineering-audit.md` | "prompt audit", "AI audit", "LLM review" | Claude API usage, prompt injection, token cost |
+| **Accessibility Audit** | `prompts/accessibility-audit.md` | "accessibility audit", "a11y audit" | WCAG 2.1 AA, keyboard nav, screen readers |
+
+**Routing rule:** Match the user's request to the most specific audit type. If ambiguous or the user just says "review council", default to General Review. If the user asks for multiple audit types (e.g., "security and performance audit"), run them as separate council sessions.
+
 ## Prerequisites
 
 Before starting, verify all 3 CLIs are installed:
@@ -65,7 +80,7 @@ If any CLI is missing, stop and inform the user. All 3 are required.
    - Read the guardrails file if the config specifies one
    - Read the DoD template if the config specifies one
 
-4. **Load the review prompt template** from `references/review-prompt-template.md` (relative to this skill's directory).
+4. **Select and load the prompt template** based on the audit type (see Audit Types table above). Load from `references/prompts/<template>.md` (relative to this skill's directory). Default to `references/prompts/general-review.md` if no specific audit type is requested.
 
 5. **Construct the review prompt** by substituting placeholders in the template:
    - `{{ARTIFACT_TYPE}}` → the type (e.g., "specification", "source code", "design document")
