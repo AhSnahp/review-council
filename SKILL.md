@@ -1,6 +1,6 @@
 ---
 name: review-council
-description: Fan out any artifact to 3 independent LLM CLI reviewers (Claude Code, Gemini CLI, Codex CLI) for parallel review, then synthesize feedback into a prioritized action list. Supports multiple audit types including general review, security audit, performance audit, database schema audit, prompt engineering audit, and accessibility audit. Trigger on "review council", "multi-model review", "council review", "LLM review panel", "get multiple AI opinions", "consensus review", "security audit", "performance audit", "database audit", "schema audit", "accessibility audit", "a11y audit", "prompt audit", "AI audit", or any request to review/audit specs/code/designs with multiple models.
+description: Fan out any artifact to 3 independent LLM CLI reviewers (Claude Code, Gemini CLI, Codex CLI) for parallel review, then synthesize feedback into a prioritized action list. Supports multiple audit types including general review, security audit, performance audit, database schema audit, prompt engineering audit, and accessibility audit. Trigger on "review council", "multi-model review", "council review", "LLM review panel", "get multiple AI opinions", "consensus review", "security audit", "performance audit", "database audit", "schema audit", "accessibility audit", "a11y audit", "prompt audit", "AI audit", "review this plan", "plan review", "check my plan", or any request to review/audit specs/code/designs/plans with multiple models.
 ---
 
 # Review Council
@@ -50,6 +50,7 @@ The council supports multiple specialized audit types. Each uses a different pro
 | **Database Audit** | `prompts/database-audit.md` | "database audit", "schema audit", "DB review" | Prisma schemas, migrations, indexes, queries |
 | **Prompt Engineering Audit** | `prompts/prompt-engineering-audit.md` | "prompt audit", "AI audit", "LLM review" | Claude API usage, prompt injection, token cost |
 | **Accessibility Audit** | `prompts/accessibility-audit.md` | "accessibility audit", "a11y audit" | WCAG 2.1 AA, keyboard nav, screen readers |
+| **Plan Review** | `prompts/plan-review.md` | "review this plan", "plan review", "check my plan" | Implementation plans, sequencing, dependencies, scope |
 
 **Routing rule:** Match the user's request to the most specific audit type. If ambiguous or the user just says "review council", default to General Review. If the user asks for multiple audit types (e.g., "security and performance audit"), run them as separate council sessions.
 
