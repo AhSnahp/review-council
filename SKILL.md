@@ -1,0 +1,197 @@
+---
+name: review-council
+description: Fan out any artifact (spec, code, design doc, architecture decision) to 3 independent LLM CLI reviewers (Claude Code, Gemini CLI, Codex CLI) for parallel review, then synthesize their feedback into a prioritized action list. Trigger on "review council", "multi-model review", "council review", "LLM review panel", "get multiple AI opinions", "consensus review", or any request to review specs/code/designs with multiple models.
+---
+
+# Review Council
+
+Fan out any artifact to 3 independent LLM CLI reviewers running different models, then synthesize their feedback into a prioritized action list with consensus analysis.
+
+## Architecture
+
+```
+                    +------------------+
+                    |  Orchestrator    |
+                    |  (Claude Code)   |
+                    +--------+---------+
+                             |
+              +--------------+--------------+
+              |              |              |
+        +-----v----+  +-----v----+  +------v-----+
+        | Claude    |  | Gemini   |  | Codex CLI  |
+        | Code CLI  |  | CLI      |  | (OpenAI)   |
+        +-----+----+  +-----+----+  +------+-----+
+              |              |              |
+              +--------------+--------------+
+                             |
+                    +--------v---------+
+                    |  Synthesizer     |
+                    |  (Claude Code)   |
+                    +------------------+
+```
+
+| Reviewer | CLI | Default Model | Strength |
+|----------|-----|---------------|----------|
+| Claude | `claude` | opus | Architectural reasoning, nuanced tradeoffs, logical gaps |
+| Gemini | `gemini` | pro (alias for latest pro model) | Broad knowledge, alternative approaches, integration concerns |
+| Codex | `codex` | CLI default (e.g. gpt-5.3-codex) | Code correctness, edge cases, performance implications |
+
+Different models trained by different teams catch different classes of issues. This is about coverage through diversity, not finding the "best" model.
+
+## Prerequisites
+
+Before starting, verify all 3 CLIs are installed:
+
+```bash
+command -v claude && command -v gemini && command -v codex
+```
+
+If any CLI is missing, stop and inform the user. All 3 are required.
+
+## Workflow
+
+### Phase 1: Prepare
+
+1. **Read the artifact** the user wants reviewed. Note its type (spec, code, design doc, etc.) and name.
+
+2. **Check for project config.** Look for `review-council.config.md` in the project root. If found, read it and extract:
+   - Enabled reviewers and model overrides
+   - Review depth setting for this artifact type
+   - Guardrails file path
+   - DoD template path
+   - Output directory (default: `reviews`)
+
+3. **Load context files** (if configured):
+   - Read the guardrails file if the config specifies one
+   - Read the DoD template if the config specifies one
+
+4. **Load the review prompt template** from `references/review-prompt-template.md` (relative to this skill's directory).
+
+5. **Construct the review prompt** by substituting placeholders in the template:
+   - `{{ARTIFACT_TYPE}}` → the type (e.g., "specification", "source code", "design document")
+   - `{{ARTIFACT_NAME}}` → the artifact's name or filename
+   - `{{ARTIFACT_CONTENT}}` → the full artifact content (see large artifact handling below)
+   - `{{GUARDRAILS_SECTION}}` → either the guardrails content wrapped in a header, or empty string if none
+   - `{{DOD_SECTION}}` → either the DoD content wrapped in a header, or empty string if none
+
+6. **Write the constructed prompt to a temp file** (e.g., `/tmp/review-council-prompt-XXXXX.md`). This avoids shell argument length limits on Windows.
+
+### Phase 2: Fan Out
+
+Run the orchestration script via Bash:
+
+```bash
+bash ~/.agents/skills/review-council/scripts/run-council.sh \
+  --artifact "<artifact-path>" \
+  --prompt-file "<temp-prompt-path>" \
+  --output-dir "<project-root>/reviews/<name>-<date>" \
+  --name "<artifact-name>" \
+  --claude-model "<model>" \
+  --gemini-model "<model>" \
+  --codex-model "<model>"
+```
+
+Use model values from project config if present, otherwise use defaults (opus, pro, CLI default). Omit `--codex-model` to let Codex use its own default model.
+
+**This will take time.** The script launches all 3 reviewers in parallel and waits for them to complete. Use a generous timeout (600000ms / 10 minutes).
+
+### Phase 3: Collect
+
+After the script completes:
+
+1. **Read `status.json`** from the output directory. Check exit codes for each reviewer.
+2. **Read the 3 review files**: `claude-review.md`, `gemini-review.md`, `codex-review.md`
+3. If any reviewer failed (non-zero exit code), **read its error log** and report to the user. Proceed with available reviews — partial results are still valuable.
+
+### Phase 4: Synthesize
+
+1. **Read the synthesis template** from `references/synthesis-template.md` (relative to this skill's directory).
+2. **Construct the synthesis prompt** by substituting the 3 review contents into the template placeholders:
+   - `{{CLAUDE_REVIEW}}` → content of claude-review.md
+   - `{{GEMINI_REVIEW}}` → content of gemini-review.md
+   - `{{CODEX_REVIEW}}` → content of codex-review.md
+3. **Perform the synthesis yourself** (as Claude Code, the orchestrator). Analyze all three reviews and produce the unified synthesis following the template structure.
+4. **Write the synthesis** to `reviews/<name>-<date>-synthesis.md`
+5. **Write the individual reviews** (concatenated) to `reviews/<name>-<date>-individual.md`
+
+### Phase 5: Verdict
+
+Present to the user:
+
+1. The **combined verdict** (most conservative wins)
+2. Each reviewer's individual verdict
+3. The **reviewer agreement matrix**
+4. The **prioritized action items** list
+5. Any **conflicts** requiring human decision
+6. File paths to the full synthesis and individual reviews
+
+## Large Artifact Handling
+
+If the artifact exceeds **80,000 characters**:
+
+1. Create a structured summary that preserves:
+   - All section headings and hierarchy
+   - Function/method signatures and type definitions
+   - Key logic and control flow
+   - Comments and documentation
+   - Import/export statements
+2. Drop: verbose implementations of straightforward functions, repetitive boilerplate, large data literals
+3. Mark omissions with `[... N lines of implementation omitted ...]`
+4. Use this summary as `{{ARTIFACT_CONTENT}}` instead of the raw artifact
+5. Inform the user that the artifact was summarized for review
+
+## Per-Project Configuration
+
+Projects can customize behavior by placing a `review-council.config.md` file in the project root. See `references/config-template.md` for the full format.
+
+Key settings:
+- **Enabled reviewers** — disable any CLI you don't have
+- **Model overrides** — use specific models per reviewer
+- **Review depth** — thorough (all 5 dimensions) or quick (correctness + architecture + risk)
+- **Guardrails/DoD paths** — inject project context into review prompts
+- **Convergence threshold** — max iterations and stop condition
+
+## Convergence Rule
+
+If the user runs the council iteratively (make changes, re-review):
+- If **2 consecutive runs** produce only SUGGEST-level items (no CRITICAL or IMPORTANT), **stop iterating**
+- You're past the point of diminishing returns. Inform the user and recommend proceeding.
+
+## Cost Awareness
+
+Each council run burns tokens across 3 models. Match effort to stakes:
+
+| Artifact Type | Recommended Action |
+|---------------|-------------------|
+| Specs, architecture decisions, critical path features | Full council (all 3 reviewers) |
+| Routine code changes, bug fixes, documentation | Single reviewer (Claude only) |
+| One-line fixes, config changes, typo corrections | Skip council entirely |
+
+If the user asks for a council review on something trivial, suggest a lighter approach. Don't refuse — just advise.
+
+## Output Files
+
+Each council run produces two files in the output directory:
+
+- `reviews/<name>-<date>-individual.md` — Raw output from each reviewer, concatenated with headers
+- `reviews/<name>-<date>-synthesis.md` — The unified synthesis with consensus, conflicts, verdicts, and action items
+
+These accumulate as a decision log over time.
+
+## Iteration Flow
+
+Based on the combined verdict:
+
+| Verdict | Action |
+|---------|--------|
+| APPROVE | Proceed. No changes needed. |
+| APPROVE_WITH_CHANGES | Make the listed changes. No re-review needed. |
+| REQUEST_CHANGES | Make changes, then run the council again. |
+| REJECT | Significant rework needed. Consider revisiting the source doc. |
+
+## Handling Ping-Pong
+
+When Reviewer A says "do X" and Reviewer B says "undo X" across iterations:
+1. The synthesis flags this as a CONFLICT
+2. Present both sides to the user for a human decision
+3. Suggest adding the decision to the project's guardrails file to prevent recurrence
