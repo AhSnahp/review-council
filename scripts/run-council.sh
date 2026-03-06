@@ -113,12 +113,14 @@ gemini "$PROMPT_CONTENT" -m "$GEMINI_MODEL" -y -o text \
   > "$OUTPUT_DIR/gemini-review.md" 2>"$OUTPUT_DIR/gemini-err.log" &
 PID_GEMINI=$!
 
-# Codex: omit -m flag when CODEX_MODEL is empty to use CLI default
+# Codex: pipe prompt via stdin (-) to avoid shell arg length limits.
+# --ephemeral skips session persistence (one-shot review, no resume needed).
+# Omit -m flag when CODEX_MODEL is empty to use CLI default.
 if [ -n "$CODEX_MODEL" ]; then
-  codex exec "$PROMPT_CONTENT" -m "$CODEX_MODEL" --full-auto --skip-git-repo-check \
+  cat "$PROMPT_FILE" | codex exec - -m "$CODEX_MODEL" --full-auto --skip-git-repo-check --ephemeral \
     > "$OUTPUT_DIR/codex-review.md" 2>"$OUTPUT_DIR/codex-err.log" &
 else
-  codex exec "$PROMPT_CONTENT" --full-auto --skip-git-repo-check \
+  cat "$PROMPT_FILE" | codex exec - --full-auto --skip-git-repo-check --ephemeral \
     > "$OUTPUT_DIR/codex-review.md" 2>"$OUTPUT_DIR/codex-err.log" &
 fi
 PID_CODEX=$!
