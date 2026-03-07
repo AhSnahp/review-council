@@ -138,12 +138,14 @@ If zero CLIs were found, add a warning: "No reviewer CLIs were found. The counci
 
 1. **Read the artifact** the user wants reviewed. Note its type (spec, code, design doc, etc.) and name.
 
-2. **Check for project config.** Look for `review-council.config.md` in the project root. If found, read it and extract:
+2. **Check for project config.** Try to Read `review-council.config.md` from the project root (do not use Glob — Read fails gracefully if the file doesn't exist, avoiding cascade cancellation of parallel tool calls). If found, read it and extract:
    - Enabled reviewers and model overrides
    - Review depth setting for this artifact type
    - Guardrails file path
    - DoD template path
    - Output directory (default: `reviews`)
+
+   If no config file is found, inform the user: "No project config found. Using defaults. Run `/review-council init` to customize settings for this project." Then proceed with defaults.
 
 3. **Load context files** (if configured):
    - Read the guardrails file if the config specifies one
