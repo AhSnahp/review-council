@@ -92,7 +92,18 @@ If any CLI is missing, stop and inform the user. All 3 are required.
 
 6. **Write the constructed prompt to a temp file** (e.g., `/tmp/review-council-prompt-XXXXX.md`). This avoids shell argument length limits on Windows.
 
+7. **Review the constructed prompt before fanning out.** Present a summary to the user showing:
+   - Audit type selected
+   - Artifact name and approximate size
+   - Models that will be used (claude=opus, gemini=pro, codex=CLI default, or overrides from project config)
+   - Whether guardrails/DoD context was injected
+   - A brief excerpt of the prompt (first ~10 lines of the artifact content section)
+
+   Ask the user to confirm before proceeding. This catches misrouted audit types, wrong artifacts, or missing context before burning tokens across 3 models. If the user says to proceed, continue to Phase 2. If they want changes, loop back to the relevant preparation step.
+
 ### Phase 2: Fan Out
+
+**CRITICAL: You MUST run the bash script below. Do NOT launch claude, gemini, or codex CLIs directly.** The script contains essential workarounds (env var stripping, model defaults, stdin piping, flag fixes) that are required for all 3 CLIs to function correctly from within a Claude Code session. Improvising your own CLI commands will fail.
 
 Run the orchestration script via Bash:
 
