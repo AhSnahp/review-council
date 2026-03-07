@@ -170,15 +170,20 @@ review-council/
 
 ## Installation
 
-Already installed via symlink:
+Already installed via Windows junction:
 
 ```
-~/.claude/skills/review-council -> ~/.agents/skills/review-council/
+~/.claude/skills/review-council  →  ~/.agents/skills/review-council/
 ```
 
 To install on another machine:
 
 ```bash
 git clone https://github.com/AhSnahp/review-council.git ~/.agents/skills/review-council
+
+# Linux/macOS:
 ln -s ~/.agents/skills/review-council ~/.claude/skills/review-council
+
+# Windows (Git Bash — ln -s creates copies, not symlinks!):
+cmd //c "mklink /J %USERPROFILE%\.claude\skills\review-council %USERPROFILE%\.agents\skills\review-council"
 ```
