@@ -66,6 +66,74 @@ If any CLI is missing, stop and inform the user. All 3 are required.
 
 ## Workflow
 
+### Mode Detection
+
+If the user's message contains "init" (e.g., `/review-council init`, "review council init", "initialize review council"), enter **Init Mode** below. Otherwise, proceed to Phase 1.
+
+### Init Mode
+
+Run this instead of the normal review workflow.
+
+#### Step 1: Check for existing config
+
+Try to Read `review-council.config.md` from the project root. If it already exists, warn the user and ask if they want to overwrite. If they say no, stop.
+
+#### Step 2: Detect environment
+
+Run the following checks. These can all run in parallel since they are independent:
+
+1. **CLI availability** (run each as a separate Bash call to avoid cascade failures):
+   ```bash
+   command -v claude 2>/dev/null && echo "found" || echo "missing"
+   ```
+   ```bash
+   command -v gemini 2>/dev/null && echo "found" || echo "missing"
+   ```
+   ```bash
+   command -v codex 2>/dev/null && echo "found" || echo "missing"
+   ```
+
+2. **Guardrails/architecture files** — Glob for candidates:
+   - `**/guardrails.md`
+   - `**/ARCHITECTURE.md`
+   - `**/architecture.md`
+   - `**/adr/**/*.md`
+   - `**/docs/decisions/**`
+
+3. **Definition of Done files** — Glob for candidates:
+   - `**/dod*.md`
+   - `**/definition-of-done*`
+   - `**/DoD*`
+
+4. **Existing output directory** — Check if `reviews/` exists.
+
+#### Step 3: Generate config
+
+Read the config template from `references/config-template.md` (relative to this skill's directory). Using the detection results, build a customized `review-council.config.md`:
+
+- Set each reviewer to `enabled` or `disabled` based on CLI availability
+- If guardrails candidates were found:
+  - If exactly one: set it as the guardrails path
+  - If multiple: set the most likely one (prefer paths containing `guardrails` > `architecture` > `adr`) and add the others as markdown comments
+- If DoD candidates were found: same logic as guardrails
+- Leave model overrides at defaults (opus, pro, CLI default)
+- Leave review depth at defaults (thorough for all)
+
+#### Step 4: Present for approval
+
+Show the user the generated config content. Summarize what was detected:
+- Which CLIs were found/missing
+- Which guardrails/DoD files were discovered (if any)
+- Any other notable findings
+
+Ask: "Write this to `./review-council.config.md`?"
+
+#### Step 5: Write config
+
+On approval, write the config to `./review-council.config.md` in the project root. Confirm to the user with the file path.
+
+If zero CLIs were found, add a warning: "No reviewer CLIs were found. The council cannot run until at least one is installed."
+
 ### Phase 1: Prepare
 
 1. **Read the artifact** the user wants reviewed. Note its type (spec, code, design doc, etc.) and name.
