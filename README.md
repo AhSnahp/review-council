@@ -65,6 +65,20 @@ Or use the slash command:
 /review-council
 ```
 
+### Initialize Project Config
+
+Run init to auto-detect your environment and scaffold a `review-council.config.md`:
+
+```
+/review-council init
+```
+
+This will:
+- Check which CLIs are installed (claude, gemini, codex)
+- Scan for guardrails and Definition of Done files in your project
+- Generate a customized config with detected values
+- Show you the config for approval before writing it
+
 ## Audit Types
 
 | Type | Trigger Phrases | What It Evaluates |
