@@ -90,8 +90,6 @@ fi
 # ── Prepare output directory ─────────────────────────────────────
 mkdir -p "$OUTPUT_DIR"
 
-PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
-
 echo "=== Review Council ==="
 echo "Artifact: $ARTIFACT"
 echo "Name: $NAME"
@@ -101,20 +99,24 @@ echo ""
 echo "Launching 3 parallel reviewers..."
 
 # ── Launch reviewers in parallel ─────────────────────────────────
-# Note: CLAUDECODE env var must be unset so claude CLI doesn't refuse
-# to launch inside a parent Claude Code session (the subprocess is
+# ALL CLIs receive the prompt via stdin pipe (cat "$PROMPT_FILE" | ...).
+# This avoids Windows' ~32KB ARG_MAX limit that kills large prompts
+# when passed as command-line arguments.
+#
+# CLAUDECODE env var must be unset so claude CLI doesn't refuse to
+# launch inside a parent Claude Code session (the subprocess is
 # non-interactive print mode, so there's no resource conflict).
 
-env -u CLAUDECODE claude -p "$PROMPT_CONTENT" --output-format text --model "$CLAUDE_MODEL" \
+cat "$PROMPT_FILE" | env -u CLAUDECODE claude -p --output-format text --model "$CLAUDE_MODEL" \
   --no-session-persistence --max-turns 3 \
   > "$OUTPUT_DIR/claude-review.md" 2>"$OUTPUT_DIR/claude-err.log" &
 PID_CLAUDE=$!
 
-gemini "$PROMPT_CONTENT" -m "$GEMINI_MODEL" -y -o text \
+cat "$PROMPT_FILE" | gemini -m "$GEMINI_MODEL" -y -o text \
   > "$OUTPUT_DIR/gemini-review.md" 2>"$OUTPUT_DIR/gemini-err.log" &
 PID_GEMINI=$!
 
-# Codex: pipe prompt via stdin (-) to avoid shell arg length limits.
+# Codex: exec - reads prompt from stdin.
 # --ephemeral skips session persistence (one-shot review, no resume needed).
 # Omit -m flag when CODEX_MODEL is empty to use CLI default.
 if [ -n "$CODEX_MODEL" ]; then
