@@ -216,7 +216,6 @@ After the script completes:
    - `{{CODEX_REVIEW}}` → content of codex-review.md
 3. **Perform the synthesis yourself** (as Claude Code, the orchestrator). Analyze all three reviews and produce the unified synthesis following the template structure.
 4. **Write the synthesis** to `reviews/<name>-<date>-synthesis.md`
-5. **Write the individual reviews** (concatenated) to `reviews/<name>-<date>-individual.md`
 
 ### Phase 5: Verdict
 
@@ -275,9 +274,9 @@ If the user asks for a council review on something trivial, suggest a lighter ap
 
 ## Output Files
 
-Each council run produces two files in the output directory:
+Each council run produces files in the output directory:
 
-- `reviews/<name>-<date>-individual.md` — Raw output from each reviewer, concatenated with headers
+- `reviews/<name>-<date>/` — Raw output from each reviewer (`claude-review.md`, `gemini-review.md`, `codex-review.md`), error logs, and `status.json`
 - `reviews/<name>-<date>-synthesis.md` — The unified synthesis with consensus, conflicts, verdicts, and action items
 
 These accumulate as a decision log over time.

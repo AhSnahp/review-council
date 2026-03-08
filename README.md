@@ -132,7 +132,6 @@ reviews/<name>-<date>/
   codex-err.log         # Codex stderr
   status.json           # Exit codes and file paths
 
-reviews/<name>-<date>-individual.md   # All 3 reviews concatenated
 reviews/<name>-<date>-synthesis.md    # Unified synthesis with verdicts
 ```
 
