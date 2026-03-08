@@ -173,24 +173,29 @@ If zero CLIs were found, add a warning: "No reviewer CLIs were found. The counci
 
 ### Phase 2: Fan Out
 
-**CRITICAL: You MUST run the bash script below. Do NOT launch claude, gemini, or codex CLIs directly.** The script contains essential workarounds (env var stripping, model defaults, stdin piping, flag fixes) that are required for all 3 CLIs to function correctly from within a Claude Code session. Improvising your own CLI commands will fail.
+**ABSOLUTELY CRITICAL — READ THIS ENTIRE SECTION BEFORE ACTING:**
 
-Run the orchestration script via Bash:
+You MUST use `run-council.sh` to launch reviewers. The script contains essential, non-obvious workarounds that you cannot replicate by constructing CLI commands yourself:
+- Environment variable stripping for nested session detection
+- Stdin piping to bypass Windows ARG_MAX limits
+- Tool disabling flags to prevent agentic file-reading behavior
+- Model default logic with conditional flag omission
+
+**You do NOT know the correct CLI flags.** The flags change across versions and operating systems. The script is the single source of truth. Do not read the script and extract commands from it. Do not construct your own `claude`, `gemini`, or `codex` commands under any circumstances.
+
+Run this command (only substitute the 4 angle-bracket values):
 
 ```bash
 bash ~/.agents/skills/review-council/scripts/run-council.sh \
   --artifact "<artifact-path>" \
   --prompt-file "<temp-prompt-path>" \
   --output-dir "<project-root>/reviews/<name>-<date>" \
-  --name "<artifact-name>" \
-  --claude-model "<model>" \
-  --gemini-model "<model>" \
-  --codex-model "<model>"
+  --name "<artifact-name>"
 ```
 
-Use model values from project config if present, otherwise use defaults (opus, pro, CLI default). Omit `--codex-model` to let Codex use its own default model.
+The script handles model selection internally. Do NOT pass `--claude-model`, `--gemini-model`, or `--codex-model` unless the user's project config explicitly overrides them.
 
-**This will take time.** The script launches all 3 reviewers in parallel and waits for them to complete. Use a generous timeout (600000ms / 10 minutes).
+**Timeout:** 600000ms (10 minutes). The script launches all 3 reviewers in parallel.
 
 ### Phase 3: Collect
 
@@ -198,7 +203,9 @@ After the script completes:
 
 1. **Read `status.json`** from the output directory. Check exit codes for each reviewer.
 2. **Read the 3 review files**: `claude-review.md`, `gemini-review.md`, `codex-review.md`
-3. If any reviewer failed (non-zero exit code), **read its error log** and report to the user. Proceed with available reviews — partial results are still valuable.
+3. If any reviewer failed (non-zero exit code), **read its error log** and report the failure to the user.
+
+**DO NOT retry failed reviewers.** Do not attempt to re-run individual CLIs. Do not construct alternative commands. Do not "fix" the failure by launching CLIs yourself. If a reviewer failed, proceed with the reviews you have — partial results (2 of 3, or even 1 of 3) are still valuable. Report which reviewers succeeded and which failed, then move to Phase 4 with available reviews.
 
 ### Phase 4: Synthesize
 
