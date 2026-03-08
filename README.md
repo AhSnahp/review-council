@@ -57,6 +57,11 @@ Invoke from Claude Code using natural language:
 "Review this plan before we execute it"
 "Accessibility audit the dashboard"
 "Prompt engineering audit on our Claude API calls"
+
+# Auto-run (fire and forget — no confirmation prompt)
+"Review council this plan, just run it"
+"Auto-review the auth module for security"
+"/review-council auto @docs/my-plan.md"
 ```
 
 Or use the slash command:

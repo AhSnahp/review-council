@@ -134,6 +134,21 @@ On approval, write the config to `./review-council.config.md` in the project roo
 
 If zero CLIs were found, add a warning: "No reviewer CLIs were found. The council cannot run until at least one is installed."
 
+### Phase 0: Interaction Mode
+
+Before doing anything else, ask the user:
+
+> **Review mode:** Would you like to review the prompt before I send it to the council, or should I use my best judgment and run it automatically?
+>
+> 1. **Review first** — I'll show you the setup and get your OK before launching
+> 2. **Auto-run** — I'll prepare and launch immediately, you can walk away
+
+If the user picks **Auto-run** (or says anything like "just go", "send it", "fire and forget", "auto"), skip Phase 1 step 7 (the pre-fanout confirmation) and proceed straight from prompt construction to fan-out without pausing. All other steps remain the same.
+
+If the user picks **Review first** (or doesn't specify), follow the full workflow including the step 7 confirmation.
+
+If the user's original message already contains clear intent (e.g., "review council, just run it" or "auto-review this plan"), infer the mode without asking.
+
 ### Phase 1: Prepare
 
 1. **Read the artifact** the user wants reviewed. Note its type (spec, code, design doc, etc.) and name.
