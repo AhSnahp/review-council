@@ -108,7 +108,7 @@ echo "Launching 3 parallel reviewers..."
 # non-interactive print mode, so there's no resource conflict).
 
 cat "$PROMPT_FILE" | env -u CLAUDECODE claude -p --output-format text --model "$CLAUDE_MODEL" \
-  --no-session-persistence --max-turns 5 --tools "" \
+  --no-session-persistence --max-turns 25 --tools "" \
   > "$OUTPUT_DIR/claude-review.md" 2>"$OUTPUT_DIR/claude-err.log" &
 PID_CLAUDE=$!
 
